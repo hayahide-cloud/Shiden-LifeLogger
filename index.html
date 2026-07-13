@@ -142,14 +142,20 @@
 /* カウンター定義。type: count=回数のみ / rated=★5評価 / rated2=量★5+質★5評価 / mood=感情値(遡及なし) */
 const COUNTERS = [
   { key: "mood",  name: "Mood", emoji: "🙂", type: "mood",  unit: "" },
+  { key: "water", name: "Water", emoji: "🥤", type: "water", unit: "回" },
   { key: "meal",  name: "Meal", emoji: "🍽️", type: "rated2", unit: "回", content: true, price: true, place: true, who: true },
   { key: "toilet", name: "Restroom", emoji: "🚽", type: "rated2", unit: "回", checks: [{ k: "small", label: "小" }, { k: "large", label: "大" }] },
   { key: "ejac",  name: "Release",  emoji: "💧", type: "rated2", unit: "回", sex: true, memo: true },
+  { key: "ibuprofen", name: "Ibuprofen", emoji: "💊", type: "dose", unit: "回", dose: 150, doseUnit: "mg", reasonDefault: "頭痛" },
   { key: "smoke", name: "Smoke",  emoji: "🚬", type: "count", unit: "本", goal: "Reduce" },
 ];
 const MOODS = [{ v: 1, e: "😣" }, { v: 2, e: "😕" }, { v: 3, e: "😐" }, { v: 4, e: "🙂" }, { v: 5, e: "😄" }];
 
 const KEY = "hayahide_events_v1", DEL_KEY = "hayahide_events_deleted_v1", CFG_KEY = "hayahide_gh_cfg";
+// 進行中フラグ（水の飲み始め〜飲み終わり等）。この端末ローカルのみで保持し同期しない
+const PEND_KEY = "hayahide_pending_v1";
+function getPending() { try { return JSON.parse(localStorage.getItem(PEND_KEY)) || {}; } catch (e) { return {}; } }
+function setPending(key, val) { const p = getPending(); if (val) p[key] = val; else delete p[key]; localStorage.setItem(PEND_KEY, JSON.stringify(p)); }
 const box = document.getElementById("counters");
 const statusEl = document.getElementById("gh-status");
 const panel = document.getElementById("gh-cfg-panel");
@@ -232,6 +238,9 @@ function summ(e) {
   if (e.place) p.push("場所:" + e.place);
   if (e.who) p.push("誰と:" + e.who);
   if (e.memo) p.push("視覚資料:" + e.memo);
+  if (e.ml != null) p.push(e.ml + "mL");
+  if (e.mg != null) p.push(e.mg + "mg");
+  if (e.reason) p.push(e.reason);
   if (e.rating) p.push("★" + e.rating);
   return p.join(" ／ ") || "記録";
 }
@@ -269,7 +278,10 @@ function dayGraphSvg(evs, type) {
       + dgDots(evs.filter(e => e.quality).map(e => ({ x: xOf(e.ts), y: yOf(e.quality) })), "var(--good)", false);
   } else if (type === "rated") {
     series = dgLine(evs.filter(e => e.rating).map(e => ({ x: xOf(e.ts), y: yOf(e.rating) })), "var(--accent)");
-  } else { // count型（喫煙など）は記録時刻に縦線
+  } else if (type === "water") { // 各回の飲水量(mL)を点で。基準は1000mL（超える日はその日の最大に合わせる）
+    const maxMl = Math.max(1000, ...evs.map(e => e.ml || 0));
+    series = dgDots(evs.filter(e => e.ml).map(e => ({ x: xOf(e.ts), y: padT + (1 - e.ml / maxMl) * plotH })), "var(--accent)", true);
+  } else { // count/dose型（喫煙・服薬など）は記録時刻に縦線
     series = evs.map(e => { const x = xOf(e.ts); return `<line x1="${x.toFixed(1)}" y1="${padT}" x2="${x.toFixed(1)}" y2="${(padT + plotH).toFixed(1)}" stroke="var(--accent)" stroke-width="2"/>`; }).join("");
   }
   return `<svg class="daygraph" viewBox="0 0 ${W} ${H}" role="img" aria-label="今日1日のグラフ">${grid}${neutral}${series}</svg>`;
@@ -349,6 +361,28 @@ function cardHtml(c) {
       + (c.price ? `<input class="memo" data-retro-price type="number" inputmode="numeric" placeholder="価格（任意）">` : "")
       + (c.place ? `<input class="memo" data-retro-place type="text" placeholder="場所（任意）" autocapitalize="off" autocorrect="off">` : "")
       + (c.who ? `<input class="memo" data-retro-who type="text" placeholder="誰と（任意）" autocapitalize="off" autocorrect="off">` : "");
+  } else if (c.type === "water") {
+    // 飲み始め→（継続中）→飲み終わりで記録。量はデフォルト500mL・変更可
+    const pend = getPending()[c.key];
+    const totalToday = todayEvents(c.key).reduce((s, e) => s + (e.ml || 0), 0);
+    const amt = pend ? pend.ml : 500;
+    if (pend) { bigval = "継続中"; biglabel = "開始 " + fmtTime(pend.start); }
+    else { bigval = totalToday; biglabel = "今日 mL"; }
+    const mlRow = `<div class="crow"><span class="rlabel">量</span><input class="memo" data-water-ml="${c.key}" type="number" inputmode="numeric" value="${amt}" placeholder="500"><span class="rsuffix">mL</span></div>`;
+    btns = mlRow + (pend
+      ? `<button class="cbtn rec" data-water-finish="${c.key}">飲み終わり</button><button class="cbtn undo" data-water-cancel="${c.key}">中止</button>`
+      : `<button class="cbtn rec" data-water-start="${c.key}">飲み始め</button>`);
+    stats = `今日 <b>${todayEvents(c.key).length}</b>回 ／ <b>${totalToday}</b>mL ／ 直近7日 <b>${w}</b>回`;
+    retroExtra = `<input class="memo" data-retro-ml type="number" inputmode="numeric" placeholder="mL">`;
+  } else if (c.type === "dose") {
+    // 服薬記録。用量はデフォルト（例:150mg）・変更可、理由は任意
+    const du = c.doseUnit || "mg";
+    const doseRow = `<div class="crow"><span class="rlabel">用量</span><input class="memo" data-dose="${c.key}" type="number" inputmode="numeric" value="${c.dose || ""}" placeholder="${c.dose || ""}"><span class="rsuffix">${du}</span></div>`;
+    const reasonRow = `<div class="crow"><span class="rlabel">理由</span><input class="memo" data-reason="${c.key}" type="text" value="${esc(c.reasonDefault || "")}" placeholder="理由（任意）" autocapitalize="off" autocorrect="off"></div>`;
+    btns = doseRow + reasonRow
+      + `<button class="cbtn rec" data-dose-rec="${c.key}">＋ 記録</button><button class="cbtn undo" data-k="${c.key}" data-undo="1">取消</button>`;
+    stats = `今日 <b>${todayEvents(c.key).length}</b>回 ／ 直近7日 <b>${w}</b>回 ／ 30日 <b>${m}</b>回`;
+    retroExtra = `<input class="memo" data-retro-dose type="number" inputmode="numeric" placeholder="用量(${du})"><input class="memo" data-retro-reason type="text" placeholder="理由（任意）" autocapitalize="off" autocorrect="off">`;
   } else {
     btns = `<button class="cbtn rec" data-k="${c.key}" data-rec="1">＋ 記録</button><button class="cbtn undo" data-k="${c.key}" data-undo="1">取消</button>`;
     stats = `直近7日 <b>${w}</b>${unit} ／ 30日 <b>${m}</b>${unit}`;
@@ -367,7 +401,7 @@ function cardHtml(c) {
       <div class="cstats">${stats}</div>
       <div class="hist" data-hist="${c.key}">${histRows}</div>
       ${dayGraph(c)}
-      <div class="clast">${last ? "最終記録 " + fmtTime(last.ts) + (last.rating ? `（★${last.rating}）` : "") + (last.amount ? `（量★${last.amount}・質★${last.quality || "-"}${last.sex != null ? (last.sex ? "・接触あり" : "・接触なし") : ""}）${(last.small || last.large) ? " " + [last.small ? "小" : "", last.large ? "大" : ""].filter(Boolean).join("・") : ""}` : "") + (last.mood ? `（${last.mood}/5）` : "") + (last.content ? ` 内容: ${esc(last.content)}` : "") + (last.price != null ? ` ${last.price}円` : "") + (last.place ? ` 場所: ${esc(last.place)}` : "") + (last.who ? ` 誰と: ${esc(last.who)}` : "") + (last.memo ? ` 視覚資料: ${esc(last.memo)}` : "") : "本日の記録なし"}</div>
+      <div class="clast">${last ? "最終記録 " + fmtTime(last.ts) + (last.rating ? `（★${last.rating}）` : "") + (last.amount ? `（量★${last.amount}・質★${last.quality || "-"}${last.sex != null ? (last.sex ? "・接触あり" : "・接触なし") : ""}）${(last.small || last.large) ? " " + [last.small ? "小" : "", last.large ? "大" : ""].filter(Boolean).join("・") : ""}` : "") + (last.mood ? `（${last.mood}/5）` : "") + (last.content ? ` 内容: ${esc(last.content)}` : "") + (last.price != null ? ` ${last.price}円` : "") + (last.place ? ` 場所: ${esc(last.place)}` : "") + (last.who ? ` 誰と: ${esc(last.who)}` : "") + (last.memo ? ` 視覚資料: ${esc(last.memo)}` : "") + (last.ml != null ? ` ${last.ml}mL` : "") + (last.mg != null ? ` ${last.mg}mg` : "") + (last.reason ? ` ${esc(last.reason)}` : "") : "本日の記録なし"}</div>
       ${retro ? `<div class="retro" data-retro="${c.key}"><label class="retro-label">過去の日時を指定して記録</label><div class="rrow"><input type="datetime-local" data-retro-dt>${retroExtra}<button class="cbtn rec" data-retro-submit="${c.key}">記録</button><button class="cbtn undo" data-canceledit="${c.key}" style="display:none">キャンセル</button></div></div>` : ""}
     </div>`;
 }
@@ -388,6 +422,9 @@ function fillEditForm(card, e) {
   set("[data-retro-price]", e.price != null ? String(e.price) : "");
   set("[data-retro-place]", e.place || "");
   set("[data-retro-who]", e.who || "");
+  set("[data-retro-ml]", e.ml != null ? String(e.ml) : "");
+  set("[data-retro-dose]", e.mg != null ? String(e.mg) : "");
+  set("[data-retro-reason]", e.reason || "");
   p.querySelectorAll("[data-retro-check]").forEach(ch => ch.checked = !!e[ch.dataset.retroCheck]);
   const submit = p.querySelector("[data-retro-submit]"); if (submit) submit.textContent = "更新";
   const lbl = p.querySelector(".retro-label"); if (lbl) lbl.textContent = "この記録を修正（日時も変更可）";
@@ -435,12 +472,22 @@ box.addEventListener("click", e => {
     const ts = new Date(dtEl.value).toISOString();
     const moodSel = p.querySelector("[data-retro-moodsel]");
     const rSel = p.querySelector("[data-retro-rating]");
+    const mlSel = p.querySelector("[data-retro-ml]"), doseSel = p.querySelector("[data-retro-dose]");
     const aSel = p.querySelector("[data-retro-amount]"), qSel = p.querySelector("[data-retro-quality]");
     let extra = {};
     if (moodSel) {
       if (!moodSel.value) { alert("気分を選んでください。"); return; }
       extra = { mood: Number(moodSel.value) };
     } else if (rSel) extra = { rating: Number(rSel.value) };
+    else if (mlSel) {
+      if (mlSel.value.trim() === "" || isNaN(Number(mlSel.value))) { alert("mLを入力してください。"); return; }
+      extra = { ml: Number(mlSel.value) };
+    } else if (doseSel) {
+      if (doseSel.value.trim() === "" || isNaN(Number(doseSel.value))) { alert("用量を入力してください。"); return; }
+      extra = { mg: Number(doseSel.value) };
+      const rEl = p.querySelector("[data-retro-reason]");
+      if (rEl && rEl.value.trim()) extra.reason = rEl.value.trim();
+    }
     if (aSel && qSel) {
       if (!aSel.value || !qSel.value) { alert("量と質を選んでください。"); return; }
       extra = { amount: Number(aSel.value), quality: Number(qSel.value) };
@@ -521,6 +568,32 @@ box.addEventListener("click", e => {
     return record(key, { mood: Number(m.dataset.moodsel) });
   }
   if (btn.dataset.rating) return record(key, { rating: Number(btn.dataset.rating) });
+  // 水: 飲み始め→継続中→飲み終わり
+  if (btn.dataset.waterStart) {
+    const k = btn.dataset.waterStart, mlEl = btn.closest(".counter").querySelector("[data-water-ml]");
+    let ml = mlEl && mlEl.value.trim() !== "" ? Number(mlEl.value) : 500;
+    if (!(ml > 0)) ml = 500;
+    setPending(k, { start: new Date().toISOString(), ml });
+    return render();
+  }
+  if (btn.dataset.waterFinish) {
+    const k = btn.dataset.waterFinish, pend = getPending()[k];
+    const mlEl = btn.closest(".counter").querySelector("[data-water-ml]");
+    let ml = mlEl && mlEl.value.trim() !== "" ? Number(mlEl.value) : (pend ? pend.ml : 500);
+    if (!(ml > 0)) ml = 500;
+    setPending(k, null);
+    return record(k, pend ? { ml, start: pend.start } : { ml }); // 記録時刻=飲み終わり
+  }
+  if (btn.dataset.waterCancel) { setPending(btn.dataset.waterCancel, null); return render(); }
+  // 服薬: 用量(mg)＋理由を即記録
+  if (btn.dataset.doseRec) {
+    const k = btn.dataset.doseRec, card = btn.closest(".counter");
+    const doseEl = card.querySelector("[data-dose]"), reasonEl = card.querySelector("[data-reason]");
+    if (!doseEl || doseEl.value.trim() === "" || isNaN(Number(doseEl.value))) { alert("用量を入力してください。"); return; }
+    const extra = { mg: Number(doseEl.value) };
+    if (reasonEl && reasonEl.value.trim()) extra.reason = reasonEl.value.trim();
+    return record(k, extra);
+  }
 });
 
 /* ---------- GitHub 同期 ---------- */
