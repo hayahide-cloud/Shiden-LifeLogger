@@ -1,7 +1,7 @@
 <svg width="512" height="512" viewBox="0 0 512 512" xmlns="http://www.w3.org/2000/svg">
   <!-- Shiden LifeLogger ホーム画面アイコン（icon-192.png / icon-512.png）のマスターSVG。
        紫電Expense の docs/icon.svg を基に、雷・背景・グラデーションはそのまま流用し、
-       背後の「領収書」を「ヘルスケアカード（白カード＋ハート＋心拍ライン）」に差し替えたもの。
+       背後の「領収書」を「人型（身体）を載せた白カード」に差し替えたもの。
        PNGを再生成する場合はこのSVGを512px/192pxでラスタライズする。 -->
   <defs>
     <radialGradient id="bgr" cx="0.5" cy="0.3" r="1.0">
@@ -20,15 +20,17 @@
     </filter>
   </defs>
   <rect width="512" height="512" fill="url(#bgr)"/>
-  <!-- ヘルスケアカード（領収書と同じ傾き・白カード。中身をハート＋心拍ラインに） -->
+  <!-- 身体カード（領収書と同じ傾きの白カードに人型を載せる） -->
   <g transform="rotate(-23.4 256 256)">
     <rect x="136" y="30" width="254" height="452" rx="26" fill="#f2f2f0"/>
-    <!-- ハート（カード上部） -->
-    <g transform="translate(158 62) scale(1.15)">
-      <path d="M50 86 C50 86 12 58 12 33 C12 17 26 8 40 8 C48 8 50 18 50 22 C50 18 52 8 60 8 C74 8 88 17 88 33 C88 58 50 86 50 86 Z" fill="#f0567a"/>
+    <circle cx="256" cy="112" r="37" fill="#7c3aed"/>
+    <g fill="none" stroke="#7c3aed" stroke-width="36" stroke-linecap="round" stroke-linejoin="round">
+      <path d="M256 164 L256 300"/>
+      <path d="M256 206 L198 264"/>
+      <path d="M256 206 L314 264"/>
+      <path d="M256 300 L212 392"/>
+      <path d="M256 300 L300 392"/>
     </g>
-    <!-- 心拍（EKG）ライン（カード下部・雷の下から左右に覗く） -->
-    <path d="M156 372 h40 l16 -44 l20 88 l17 -44 h115" fill="none" stroke="#7c3aed" stroke-width="15" stroke-linejoin="round" stroke-linecap="round"/>
   </g>
   <!-- 雷（紫電Expense と完全に同一） -->
   <g transform="translate(48 56) scale(0.78)" filter="url(#sh)">
