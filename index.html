@@ -489,11 +489,12 @@ function render() {
 // （＝まだ記録しない）。3秒以内に再タップで記録、放置で自動リセット。喫煙・服薬などの基本の型
 function needConfirm(btn) {
   if (!btn.dataset.confirm || btn.dataset.armed === "1") return false;
+  const orig = btn.textContent; // 元のラベル（＋記録／まとめて記録 等）を保持して戻す
   btn.dataset.armed = "1";
   btn.textContent = "もう1回タップで記録";
   btn.classList.add("arming");
   clearTimeout(btn._armTimer);
-  btn._armTimer = setTimeout(() => { btn.dataset.armed = ""; btn.textContent = "＋ 記録"; btn.classList.remove("arming"); }, 3000);
+  btn._armTimer = setTimeout(() => { btn.dataset.armed = ""; btn.textContent = orig; btn.classList.remove("arming"); }, 3000);
   return true;
 }
 
