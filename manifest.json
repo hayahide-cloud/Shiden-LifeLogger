@@ -1,6 +1,6 @@
 {
   "name": "Shiden LifeLogger",
-  "short_name": "紫電LifeLog",
+  "short_name": "紫電LifeLogger",
   "description": "日次ライフログ / M.T.Works",
   "start_url": ".",
   "display": "standalone",
