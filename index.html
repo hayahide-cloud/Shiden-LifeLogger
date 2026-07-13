@@ -73,10 +73,12 @@
   /* 数値欄の増減スピナー（1ずつ動く矢印）を非表示にする */
   .memo::-webkit-outer-spin-button, .memo::-webkit-inner-spin-button { -webkit-appearance: none; margin: 0; }
   .memo[type="number"] { -moz-appearance: textfield; appearance: textfield; }
-  /* 服薬・サプリの個別カード折りたたみ */
-  .medtoggle { width: 100%; justify-content: flex-start; font-size: 14px; font-weight: 700; margin-bottom: 16px; padding: 13px 16px; background: var(--surface); }
-  .medgroup { display: none; }
-  .medgroup.open { display: block; }
+  /* カードグループ（服薬個別・Release など）の折りたたみ */
+  .cardgrouptoggle { width: 100%; justify-content: flex-start; font-size: 14px; font-weight: 700; margin-bottom: 16px; padding: 13px 16px; background: var(--surface); }
+  .cardgroup { display: none; }
+  .cardgroup.open { display: block; }
+  /* グラフ一括非表示 */
+  #counters.hide-graphs .daygraph-wrap { display: none; }
   .rsuffix { font-size: 13px; color: var(--muted); flex: none; }
   .rnote { font-size: 11.5px; color: var(--muted); flex: 1; min-width: 0; }
   .rcheck { display: inline-flex; align-items: center; gap: 6px; font-size: 15px; color: var(--ink); background: var(--surface-2); border: 1px solid var(--border); border-radius: 10px; padding: 8px 11px; }
@@ -126,6 +128,7 @@
     <div class="sync-head">
       <span id="gh-status" class="gh-status"></span>
       <span>
+        <button class="linkbtn" id="graph-toggle" type="button">📈 グラフ</button>
         <button class="linkbtn" id="gh-sync" type="button">🔄 同期</button>
         <button class="linkbtn" id="gh-config" type="button">⚙️ 設定</button>
       </span>
@@ -157,7 +160,7 @@ const COUNTERS = [
   { key: "water", name: "Water", emoji: "🥤", type: "water", unit: "回" },
   { key: "meal",  name: "Meal", emoji: "🍽️", type: "rated2", unit: "回", content: true, price: true, place: true, who: true },
   { key: "toilet", name: "Restroom", emoji: "🚽", type: "rated2", unit: "回", checks: [{ k: "small", label: "小" }, { k: "large", label: "大" }] },
-  { key: "ejac",  name: "Release",  emoji: "💧", type: "rated2", unit: "回", sex: true, memo: true },
+  { key: "ejac",  name: "Release",  emoji: "💧", type: "rated2", unit: "回", sex: true, memo: true, group: "private" },
   { key: "meds_routine", name: "服薬まとめ", emoji: "✅", type: "routine", routines: [
     { label: "朝", keys: ["cepharanthin", "betamethasone", "zinc", "dha"], note: "セファ・ベタ・亜鉛・DHA" },
     { label: "昼", keys: ["cepharanthin"], note: "セファ" },
@@ -493,24 +496,31 @@ function fillEditForm(card, e) {
   const lbl = p.querySelector(".retro-label"); if (lbl) lbl.textContent = "この記録を修正（日時も変更可）";
   const cancel = p.querySelector("[data-canceledit]"); if (cancel) cancel.style.display = "";
 }
-const MEDS_OPEN_KEY = "hayahide_meds_open";
+// 折りたたみ可能なカードグループ。連続する同一 group のカードを1つの開閉枠にまとめる
+const GROUPS = {
+  meds: { show: "▶ 服薬・サプリの個別カード（Ibuprofen・セファ 他）を表示", hide: "▼ 服薬・サプリの個別カードを隠す" },
+  private: { show: "▶ Release を表示", hide: "▼ Release を隠す" },
+};
+function groupOpen(g) { return localStorage.getItem("hayahide_group_" + g) === "1"; }
 function render() {
-  const medsOpen = localStorage.getItem(MEDS_OPEN_KEY) === "1";
-  let html = "", inGroup = false;
+  let html = "", cur = null;
+  const closeGroup = () => { if (cur) { html += `</div>`; cur = null; } };
   COUNTERS.forEach(c => {
-    if (c.group === "meds") {
-      if (!inGroup) { // 服薬個別カードの先頭に開閉トグル＋折りたたみ枠を差し込む
-        html += `<button class="cbtn medtoggle" data-medtoggle="1">${medsOpen ? "▼ 服薬・サプリの個別カードを隠す" : "▶ 服薬・サプリの個別カード（Ibuprofen・セファ 他）を表示"}</button>`;
-        html += `<div class="medgroup${medsOpen ? " open" : ""}">`;
-        inGroup = true;
+    if (c.group && GROUPS[c.group]) {
+      if (cur !== c.group) { // グループの先頭に開閉トグル＋折りたたみ枠を差し込む
+        closeGroup();
+        const open = groupOpen(c.group), g = GROUPS[c.group];
+        html += `<button class="cbtn cardgrouptoggle" data-grouptoggle="${c.group}">${open ? g.hide : g.show}</button>`;
+        html += `<div class="cardgroup${open ? " open" : ""}">`;
+        cur = c.group;
       }
       html += cardHtml(c);
     } else {
-      if (inGroup) { html += `</div>`; inGroup = false; }
+      closeGroup();
       html += cardHtml(c);
     }
   });
-  if (inGroup) html += `</div>`;
+  closeGroup();
   box.innerHTML = html;
   if (editing) { // 再描画後に編集モードを復元
     const e = events(editing.key).find(ev => ev.id === editing.id);
@@ -616,8 +626,9 @@ box.addEventListener("click", e => {
     else record(key, extra, ts);
     return;
   }
-  if (btn.dataset.medtoggle) { // 服薬個別カードの表示/非表示を切り替え（端末に記憶）
-    localStorage.setItem(MEDS_OPEN_KEY, localStorage.getItem(MEDS_OPEN_KEY) === "1" ? "0" : "1");
+  if (btn.dataset.grouptoggle) { // カードグループ（服薬個別・Release等）の表示/非表示（端末に記憶）
+    const g = btn.dataset.grouptoggle;
+    localStorage.setItem("hayahide_group_" + g, groupOpen(g) ? "0" : "1");
     return render();
   }
   // 服薬まとめ: 時間帯の全薬をまとめて記録（2タップ確認）
@@ -806,6 +817,20 @@ document.getElementById("cfg-save").addEventListener("click", () => {
 });
 document.getElementById("cfg-clear").addEventListener("click", () => { localStorage.removeItem(CFG_KEY); fillCfg(); status("設定を削除しました"); });
 document.getElementById("gh-sync").addEventListener("click", sync);
+
+// グラフ一括表示/非表示（#counters に hide-graphs クラス。端末に記憶）
+const GRAPH_HIDE_KEY = "hayahide_graphs_hidden";
+const graphToggle = document.getElementById("graph-toggle");
+function applyGraphHidden() {
+  const hidden = localStorage.getItem(GRAPH_HIDE_KEY) === "1";
+  box.classList.toggle("hide-graphs", hidden);
+  graphToggle.textContent = hidden ? "📈 グラフ表示" : "📉 グラフ非表示";
+}
+graphToggle.addEventListener("click", () => {
+  localStorage.setItem(GRAPH_HIDE_KEY, localStorage.getItem(GRAPH_HIDE_KEY) === "1" ? "0" : "1");
+  applyGraphHidden();
+});
+applyGraphHidden();
 
 render();
 if (cfgOk(getCfg())) { status("設定済み"); sync(); } else { status("未同期（この端末はまだ設定していません）"); }
