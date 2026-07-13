@@ -4,72 +4,87 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
 <title>Shiden LifeLogger</title>
+<meta name="description" content="日々の記録をつける紫電ライフログ（スマホ用・GitHub同期）">
+<link rel="manifest" href="manifest.json">
+<link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 512 512'%3E%3Crect width='512' height='512' rx='115' fill='%237c3aed'/%3E%3Cpath d='M296 66 L158 296 L248 296 L212 446 L376 218 L276 218 L336 66 Z' fill='%23facc15'/%3E%3C/svg%3E">
+<link rel="apple-touch-icon" href="icon-192.png">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="紫電LifeLog">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="theme-color" content="#09060f">
 <style>
   /* ================================================================
      Shiden LifeLogger — 日次カウンター記録ページ（スマホ用・GitHub同期）
      秘密情報は一切含まない。実データはPrivateの Hayahide-Log に保存。
      トークンは各端末のブラウザ内(localStorage)のみに保存される。
      ================================================================ */
+  /* ムラサキタヌキ／紫電ブランドの紫×漆黒ダークテーマ（Shiden Expense とトーンを統一） */
   :root {
-    --page: #0c0a11; --surface: #16131d; --surface-2: #1d1926;
-    --ink: #f2f0f7; --ink-2: #b8b3c7; --muted: #7d7890;
-    --grid: #2a2536; --border: rgba(158,140,255,0.14);
-    --accent: #9085e9; --accent-hi: #b5aaff; --accent-deep: #5b4bc4;
-    --accent-soft: rgba(144,133,233,0.10); --good: #34c85a; --bad: #e66767;
+    --page: #09060f; --surface: #14101d; --surface-2: #1d1729;
+    --ink: #ece5fa; --ink-2: #c4b7dc; --muted: #9b8db8;
+    --grid: #2a2140; --border: rgba(168,120,255,0.16);
+    --accent: #a06bff; --accent-hi: #c084fc; --accent-deep: #7c3aed;
+    --accent-soft: rgba(124,58,237,0.10); --good: #34d399; --bad: #f87171;
   }
   * { margin: 0; padding: 0; box-sizing: border-box; }
   html { color-scheme: dark; }
   body {
     background:
-      radial-gradient(900px 460px at 80% -10%, rgba(120,90,240,0.16), transparent 60%),
+      radial-gradient(920px 500px at 82% -12%, rgba(124,58,237,0.20), transparent 60%),
       var(--page);
     color: var(--ink);
-    font-family: system-ui, -apple-system, "Segoe UI", "Hiragino Sans", "Yu Gothic UI", sans-serif;
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "Hiragino Sans", "Yu Gothic UI", sans-serif;
     line-height: 1.6; padding: max(20px, env(safe-area-inset-top)) 16px 48px; min-height: 100vh;
+    -webkit-text-size-adjust: 100%;
   }
   .wrap { max-width: 720px; margin: 0 auto; }
-  header { margin-bottom: 20px; }
+  header { margin-bottom: 22px; text-align: center; padding-top: 4px; }
   h1 {
-    font-size: 22px; font-weight: 700;
-    background: linear-gradient(90deg, var(--ink), var(--accent-hi));
-    -webkit-background-clip: text; background-clip: text; color: transparent;
+    font-size: 25px; font-weight: 800; color: var(--ink); letter-spacing: 0.01em;
+    display: inline-flex; align-items: center; gap: 9px; justify-content: center;
   }
-  .sub { color: var(--muted); font-size: 12px; }
+  h1 .logo-badge { width: 30px; height: 30px; flex: none; }
+  h1 .brand-grad {
+    background: linear-gradient(90deg, #a78bfa, #7c3aed);
+    -webkit-background-clip: text; background-clip: text; -webkit-text-fill-color: transparent;
+  }
+  .sub { color: var(--muted); font-size: 12px; margin-top: 5px; }
+  .header-underline { width: 46px; height: 2px; margin: 12px auto 0; border-radius: 2px; background: linear-gradient(90deg, var(--accent-deep), var(--accent-hi)); }
 
-  .card { background: var(--surface); border: 1px solid var(--border); border-radius: 16px; padding: 18px; margin-bottom: 16px; }
+  .card { background: linear-gradient(180deg, rgba(124,58,237,0.06), rgba(124,58,237,0) 46%), var(--surface); border: 1px solid var(--border); border-radius: 18px; padding: 18px; margin-bottom: 16px; box-shadow: 0 10px 28px rgba(0,0,0,0.35); }
   .sync-head { display: flex; align-items: center; justify-content: space-between; gap: 10px; flex-wrap: wrap; }
   .gh-status { font-size: 12px; color: var(--muted); }
   .linkbtn { font-family: inherit; font-size: 13px; cursor: pointer; background: none; border: none; color: var(--accent-hi); text-decoration: underline; text-underline-offset: 3px; padding: 6px 2px; }
   .linkbtn.danger { color: var(--bad); }
-  .btn { font-family: inherit; font-weight: 700; cursor: pointer; color: #fff; border: none; border-radius: 999px; padding: 9px 16px; background: linear-gradient(90deg, var(--accent-deep), var(--accent)); }
+  .btn { font-family: inherit; font-weight: 700; cursor: pointer; color: #fff; border: none; border-radius: 999px; padding: 9px 18px; background: linear-gradient(135deg, var(--accent-deep) 0%, #a855f7 60%, #b678fb 100%); box-shadow: 0 6px 20px rgba(124,58,237,0.3); }
 
   .sync-cfg { display: none; margin-top: 14px; }
   .sync-cfg.open { display: block; }
   .sync-cfg label { font-size: 12px; color: var(--ink-2); display: block; margin-bottom: 10px; }
   .cfg-grid { display: grid; gap: 8px; }
   .sync-cfg input { width: 100%; font-family: inherit; font-size: 16px; background: var(--surface-2); color: var(--ink); border: 1px solid var(--border); border-radius: 10px; padding: 11px 12px; }
-  .sync-cfg input:focus { outline: 2px solid var(--accent); border-color: transparent; }
+  .sync-cfg input:focus { outline: none; border-color: var(--accent); box-shadow: 0 0 0 3px rgba(160,107,255,0.2); }
   .cfg-actions { display: flex; align-items: center; gap: 14px; margin-top: 12px; flex-wrap: wrap; }
 
-  .counter { background: var(--surface); border: 1px solid var(--border); border-radius: 16px; padding: 18px; margin-bottom: 16px; }
+  .counter { background: linear-gradient(180deg, rgba(124,58,237,0.06), rgba(124,58,237,0) 46%), var(--surface); border: 1px solid var(--border); border-radius: 18px; padding: 18px; margin-bottom: 16px; box-shadow: 0 10px 28px rgba(0,0,0,0.35); }
   .chead { display: flex; align-items: center; gap: 10px; margin-bottom: 12px; }
   .cemoji { font-size: 24px; }
-  .cname { font-size: 16px; font-weight: 700; }
+  .cname { font-size: 16px; font-weight: 700; letter-spacing: 0.01em; }
   .cgoal { font-size: 11px; color: var(--muted); margin-left: auto; }
   .cbig { display: flex; align-items: baseline; gap: 8px; margin-bottom: 12px; }
   .cval { font-size: 34px; font-weight: 700; font-variant-numeric: tabular-nums; }
   .cunit { font-size: 13px; color: var(--muted); }
   .cbtns { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
   .brk { flex-basis: 100%; height: 0; margin: 0; } /* flex-wrap内で強制改行するスペーサー */
-  .cbtn { cursor: pointer; font-family: inherit; font-size: 15px; font-weight: 700; line-height: 1; border: 1px solid var(--border); border-radius: 11px; background: var(--surface-2); color: var(--ink); padding: 12px 14px; }
-  .cbtn.rec { background: linear-gradient(135deg, var(--accent-deep), var(--accent)); color: #fff; border: none; }
-  .cbtn.rec.arming { background: linear-gradient(135deg, #b06a12, #e0902a); } /* 誤タップ防止の確認状態 */
-  .cbtn.undo { color: var(--muted); font-size: 13px; font-weight: 600; }
-  .cbtn.sel { background: linear-gradient(135deg, var(--accent-deep), var(--accent)); color: #fff; border-color: transparent; }
+  .cbtn { cursor: pointer; font-family: inherit; font-size: 15px; font-weight: 700; line-height: 1; border: 1px solid var(--border); border-radius: 11px; background: var(--surface-2); color: var(--ink); padding: 12px 14px; transition: transform .05s, box-shadow .15s; }
+  .cbtn.rec { background: linear-gradient(135deg, var(--accent-deep) 0%, #a855f7 60%, #b678fb 100%); color: #fff; border: none; box-shadow: 0 6px 18px rgba(124,58,237,0.32); }
+  .cbtn.rec.arming { background: linear-gradient(135deg, #b06a12, #e0902a); box-shadow: 0 6px 18px rgba(224,144,42,0.32); } /* 誤タップ防止の確認状態 */
+  .cbtn.undo { color: var(--muted); font-size: 13px; font-weight: 600; background: transparent; }
+  .cbtn.sel { background: linear-gradient(135deg, var(--accent-deep) 0%, #a855f7 60%, #b678fb 100%); color: #fff; border-color: transparent; box-shadow: 0 4px 14px rgba(124,58,237,0.3); }
   .crow { flex: 1 0 100%; display: flex; gap: 8px; align-items: center; }
   .rlabel { font-size: 12px; color: var(--muted); min-width: 3.4em; flex: none; }
   .memo { flex: 1; min-width: 0; font-family: inherit; font-size: 15px; background: var(--surface-2); color: var(--ink); border: 1px solid var(--border); border-radius: 11px; padding: 11px 13px; }
-  .memo:focus { outline: 2px solid var(--accent); border-color: transparent; }
+  .memo:focus { outline: none; border-color: var(--accent); box-shadow: 0 0 0 3px rgba(160,107,255,0.2); }
   /* 数値欄の増減スピナー（1ずつ動く矢印）を非表示にする */
   .memo::-webkit-outer-spin-button, .memo::-webkit-inner-spin-button { -webkit-appearance: none; margin: 0; }
   .memo[type="number"] { -moz-appearance: textfield; appearance: textfield; }
@@ -119,8 +134,16 @@
 <body>
 <div class="wrap">
   <header>
-    <h1>Shiden LifeLogger</h1>
-    <div class="sub">日次カウンター — 記録は端末に保存し GitHub で同期</div>
+    <h1><svg class="logo-badge" viewBox="0 0 512 512" aria-hidden="true">
+      <defs>
+        <linearGradient id="badge-bg" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#a855f7"/><stop offset="1" stop-color="#6d28d9"/></linearGradient>
+        <linearGradient id="badge-bolt" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#fde047"/><stop offset="1" stop-color="#facc15"/></linearGradient>
+      </defs>
+      <rect width="512" height="512" rx="115" fill="url(#badge-bg)"/>
+      <path d="M296 66 L158 296 L248 296 L212 446 L376 218 L276 218 L336 66 Z" fill="url(#badge-bolt)"/>
+    </svg><span class="brand-grad">Shiden</span> LifeLogger</h1>
+    <p class="sub">日次ライフログ / M.T.Works</p>
+    <div class="header-underline"></div>
   </header>
 
   <!-- 同期 -->
