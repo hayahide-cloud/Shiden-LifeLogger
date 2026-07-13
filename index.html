@@ -118,6 +118,12 @@
   .cbtn:active { transform: scale(0.95); }
   .cstats { font-size: 12.5px; color: var(--ink-2); margin-top: 12px; }
   .cstats b { color: var(--ink); font-weight: 700; }
+  /* Apple ヘルスケア（読み取り専用カード） */
+  .health-upd { margin-left: auto; font-size: 11px; color: var(--muted); }
+  .health-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; }
+  .health-item { background: var(--surface-2); border: 1px solid var(--border); border-radius: 12px; padding: 14px 8px; text-align: center; }
+  .health-item .hv { font-size: 21px; font-weight: 800; color: var(--ink); font-variant-numeric: tabular-nums; }
+  .health-item .hl { font-size: 11px; color: var(--muted); margin-top: 5px; }
   .clast { font-size: 11px; color: var(--muted); margin-top: 4px; }
   .retro { display: none; margin-top: 12px; padding-top: 12px; border-top: 1px solid var(--grid); }
   .retro.open { display: block; }
@@ -175,6 +181,16 @@
     </div>
   </div>
 
+  <!-- Apple ヘルスケア（読み取り専用）。iOSショートカットが health.json を上書き保存し、ここに表示する -->
+  <div class="card health-card" id="health-card" hidden>
+    <div class="chead"><span class="cemoji">❤️‍🩹</span><span class="cname">Apple ヘルスケア</span><span class="health-upd"></span></div>
+    <div class="health-grid">
+      <div class="health-item"><div class="hv" data-h-steps>—</div><div class="hl">歩数</div></div>
+      <div class="health-item"><div class="hv" data-h-weight>—</div><div class="hl">体重</div></div>
+      <div class="health-item"><div class="hv" data-h-hr>—</div><div class="hl">心拍数</div></div>
+    </div>
+  </div>
+
   <div id="counters"></div>
   <footer>Shiden LifeLogger — トークンとデータはこの公開ページには含まれません</footer>
 </div>
@@ -203,6 +219,10 @@ const COUNTERS = [
 const MOODS = [{ v: 1, e: "😣" }, { v: 2, e: "😕" }, { v: 3, e: "😐" }, { v: 4, e: "🙂" }, { v: 5, e: "😄" }];
 
 const KEY = "hayahide_events_v1", DEL_KEY = "hayahide_events_deleted_v1", CFG_KEY = "hayahide_gh_cfg";
+// Apple ヘルスケア連携（読み取り専用）。iOSショートカットが同リポジトリの health.json を丸ごと上書き保存し、
+// このアプリはそれを取得して表示するだけ（記録データ counters.json とは分離）
+const HEALTH_KEY = "hayahide_health_v1", HEALTH_PATH = "health.json";
+function getHealth() { try { return JSON.parse(localStorage.getItem(HEALTH_KEY)) || null; } catch (e) { return null; } }
 // 進行中フラグ（水の飲み始め〜飲み終わり等）。端末間で「継続中」を共有するため同期対象に含める。
 // 中止/終了は削除ではなく cleared の墓標＋更新時刻(mt)で表し、マージ時に mt が新しい方（開始 or 終了）を採用する
 const PEND_KEY = "hayahide_pending_v1";
@@ -825,6 +845,25 @@ async function syncOnce(c) {
   save(merged.events); saveDeleted(merged.deleted); savePending(mergedPending);
   await ghPut(c, Object.assign({}, merged, { pending: mergedPending }), remote.sha);
 }
+// Apple ヘルスケアの health.json を取得してローカルにキャッシュ（読み取り専用・失敗しても本体同期は止めない）
+async function fetchHealth(c) {
+  const url = `https://api.github.com/repos/${c.owner}/${c.repo}/contents/${HEALTH_PATH}?ref=${c.branch || "main"}`;
+  const r = await fetch(url, { headers: { Authorization: "Bearer " + c.token, Accept: "application/vnd.github+json" } });
+  if (!r.ok) return; // 未作成(404)等は静かにスキップ
+  const j = await r.json();
+  localStorage.setItem(HEALTH_KEY, JSON.stringify(JSON.parse(b64dec(j.content))));
+}
+// ヘルスケアカードの描画（データが無ければ非表示）
+function renderHealth() {
+  const el = document.getElementById("health-card"), h = getHealth();
+  if (!h) { el.hidden = true; return; }
+  el.hidden = false;
+  const put = (sel, v, unit) => { el.querySelector(sel).textContent = (v != null && v !== "") ? (v + (unit || "")) : "—"; };
+  put("[data-h-steps]", h.steps, "");
+  put("[data-h-weight]", h.weight, " kg");
+  put("[data-h-hr]", h.heartRate, " bpm");
+  el.querySelector(".health-upd").textContent = h.updated ? "更新 " + fmtTime(h.updated) : (h.date || "");
+}
 let syncing = false, syncTimer = null;
 async function sync() {
   const c = getCfg();
@@ -834,7 +873,8 @@ async function sync() {
   try {
     try { await syncOnce(c); }
     catch (e) { if (/\b409\b/.test(e.message)) { await syncOnce(c); } else { throw e; } } // 競合時は最新SHAで1回再試行
-    render(); status("同期完了 " + hhmm());
+    try { await fetchHealth(c); } catch (e) { /* ヘルスケア取得失敗は無視 */ }
+    render(); renderHealth(); status("同期完了 " + hhmm());
   } catch (e) { status("同期失敗: " + e.message); } finally { syncing = false; }
 }
 function scheduleSync() { if (!cfgOk(getCfg())) return; clearTimeout(syncTimer); syncTimer = setTimeout(sync, 2500); }
@@ -875,7 +915,7 @@ graphToggle.addEventListener("click", () => {
 });
 applyGraphHidden();
 
-render();
+render(); renderHealth();
 if (cfgOk(getCfg())) { status("設定済み"); sync(); } else { status("未同期（この端末はまだ設定していません）"); }
 </script>
 </body>
