@@ -195,13 +195,13 @@ function cardHtml(c) {
     // 量・質を★で選んでから「＋記録」で1件記録する。初期選択なし＝両方を選ばないと記録できない
     const starRow = (dim, label) => `<div class="crow"><span class="rlabel">${label}</span>`
       + [1, 2, 3, 4, 5].map(v => `<button class="cbtn" data-k="${c.key}" data-dim="${dim}" data-v="${v}">★${v}</button>`).join("") + `</div>`;
-    // 射精など sex:true のカードは性行為の有無を必須で選ぶ（脳内物質の観点で重要）
-    const sexRow = `<div class="crow"><span class="rlabel">性行為</span>`
-      + `<button class="cbtn" data-k="${c.key}" data-sex="1">あり</button>`
-      + `<button class="cbtn" data-k="${c.key}" data-sex="0">なし</button></div>`;
-    // memo:true のカードはオカズ（参考資料）を自由入力できる（任意）
-    const memoRow = `<div class="crow"><span class="rlabel">オカズ</span>`
-      + `<input class="memo" data-memo="${c.key}" type="text" placeholder="参考資料（任意）" autocapitalize="off" autocorrect="off"></div>`;
+    // 射精など sex:true のカードは接触の有無を記録する（脳内物質の観点で重要）。既定は「なし」
+    const sexRow = `<div class="crow"><span class="rlabel">接触</span>`
+      + `<button class="cbtn sel" data-k="${c.key}" data-sex="0">なし</button>`
+      + `<button class="cbtn" data-k="${c.key}" data-sex="1">あり</button></div>`;
+    // memo:true のカードは視覚資料を自由入力できる（任意）
+    const memoRow = `<div class="crow"><span class="rlabel">視覚資料</span>`
+      + `<input class="memo" data-memo="${c.key}" type="text" placeholder="任意" autocapitalize="off" autocorrect="off"></div>`;
     btns = starRow("amount", "量") + starRow("quality", "質")
       + (c.sex ? sexRow : "") + (c.memo ? memoRow : "")
       + `<button class="cbtn rec" data-k="${c.key}" data-rec2="1">＋ 記録</button><button class="cbtn undo" data-k="${c.key}" data-undo="1">取消</button>`;
@@ -209,8 +209,8 @@ function cardHtml(c) {
     stats = `直近7日 <b>${w}</b>${unit} ／ 30日 <b>${m}</b>${unit}${aAvg ? ` ／ 量平均 <b>★${aAvg.toFixed(1)}</b>` : ""}${qAvg ? ` ／ 質平均 <b>★${qAvg.toFixed(1)}</b>` : ""}`;
     retroExtra = `<select data-retro-amount><option value="" selected>量 未選択</option>${[5, 4, 3, 2, 1].map(v => `<option value="${v}">量★${v}</option>`).join("")}</select>`
       + `<select data-retro-quality><option value="" selected>質 未選択</option>${[5, 4, 3, 2, 1].map(v => `<option value="${v}">質★${v}</option>`).join("")}</select>`
-      + (c.sex ? `<select data-retro-sex><option value="" selected>性行為 未選択</option><option value="1">性行為あり</option><option value="0">性行為なし</option></select>` : "")
-      + (c.memo ? `<input class="memo" data-retro-memo type="text" placeholder="オカズ（任意）" autocapitalize="off" autocorrect="off">` : "");
+      + (c.sex ? `<select data-retro-sex><option value="0" selected>接触なし</option><option value="1">接触あり</option></select>` : "")
+      + (c.memo ? `<input class="memo" data-retro-memo type="text" placeholder="任意" autocapitalize="off" autocorrect="off">` : "");
   } else {
     btns = `<button class="cbtn rec" data-k="${c.key}" data-rec="1">＋ 記録</button><button class="cbtn undo" data-k="${c.key}" data-undo="1">取消</button>`;
     stats = `直近7日 <b>${w}</b>${unit} ／ 30日 <b>${m}</b>${unit}`;
@@ -222,7 +222,7 @@ function cardHtml(c) {
       <div class="cbig"><span class="cval">${bigval}</span><span class="cunit">${biglabel}</span></div>
       <div class="cbtns">${btns}${retro ? `<button class="cbtn undo" data-retro-open="${c.key}">遡って記録</button>` : ""}</div>
       <div class="cstats">${stats}</div>
-      <div class="clast">${last ? "最終記録 " + fmtTime(last.ts) + (last.rating ? `（★${last.rating}）` : "") + (last.amount ? `（量★${last.amount}・質★${last.quality || "-"}${last.sex != null ? (last.sex ? "・性行為あり" : "・性行為なし") : ""}）` : "") + (last.mood ? `（${last.mood}/5）` : "") + (last.memo ? ` オカズ: ${esc(last.memo)}` : "") : "本日の記録なし"}</div>
+      <div class="clast">${last ? "最終記録 " + fmtTime(last.ts) + (last.rating ? `（★${last.rating}）` : "") + (last.amount ? `（量★${last.amount}・質★${last.quality || "-"}${last.sex != null ? (last.sex ? "・接触あり" : "・接触なし") : ""}）` : "") + (last.mood ? `（${last.mood}/5）` : "") + (last.memo ? ` 視覚資料: ${esc(last.memo)}` : "") : "本日の記録なし"}</div>
       ${retro ? `<div class="retro" data-retro="${c.key}"><label>過去の日時を指定して記録</label><div class="rrow"><input type="datetime-local" data-retro-dt>${retroExtra}<button class="cbtn rec" data-retro-submit="${c.key}">記録</button></div></div>` : ""}
     </div>`;
 }
@@ -249,10 +249,7 @@ box.addEventListener("click", e => {
       if (!aSel.value || !qSel.value) { alert("量と質を選んでください。"); return; }
       extra = { amount: Number(aSel.value), quality: Number(qSel.value) };
       const sexSel = p.querySelector("[data-retro-sex]");
-      if (sexSel) {
-        if (!sexSel.value) { alert("性行為の有無を選んでください。"); return; }
-        extra.sex = sexSel.value === "1";
-      }
+      if (sexSel) extra.sex = sexSel.value === "1"; // 既定「なし」
       const memoEl = p.querySelector("[data-retro-memo]");
       if (memoEl && memoEl.value.trim()) extra.memo = memoEl.value.trim();
     }
@@ -272,11 +269,8 @@ box.addEventListener("click", e => {
     const a = card.querySelector('.sel[data-dim="amount"]'), q = card.querySelector('.sel[data-dim="quality"]');
     if (!a || !q) { alert("量と質を選んでください。"); return; }
     const extra = { amount: Number(a.dataset.v), quality: Number(q.dataset.v) };
-    if (card.querySelector("[data-sex]")) { // 性行為の記録があるカードは必須
-      const sx = card.querySelector(".sel[data-sex]");
-      if (!sx) { alert("性行為の有無を選んでください。"); return; }
-      extra.sex = sx.dataset.sex === "1";
-    }
+    const sx = card.querySelector(".sel[data-sex]"); // 接触は既定「なし」が選択済み
+    if (sx) extra.sex = sx.dataset.sex === "1";
     const memoEl = card.querySelector("[data-memo]");
     if (memoEl && memoEl.value.trim()) extra.memo = memoEl.value.trim();
     return record(key, extra);
