@@ -124,7 +124,7 @@
 /* カウンター定義。type: count=回数のみ / rated=★5評価 / rated2=量★5+質★5評価 / mood=感情値(遡及なし) */
 const COUNTERS = [
   { key: "mood",  name: "Mood", emoji: "🙂", type: "mood",  unit: "" },
-  { key: "meal",  name: "Meal", emoji: "🍽️", type: "rated2", unit: "回", price: true, place: true, who: true },
+  { key: "meal",  name: "Meal", emoji: "🍽️", type: "rated2", unit: "回", content: true, price: true, place: true, who: true },
   { key: "toilet", name: "Restroom", emoji: "🚽", type: "rated2", unit: "回", checks: [{ k: "small", label: "小" }, { k: "large", label: "大" }] },
   { key: "ejac",  name: "Release",  emoji: "💧", type: "rated2", unit: "回", sex: true, memo: true },
   { key: "smoke", name: "Smoke",  emoji: "🚬", type: "count", unit: "本", goal: "Reduce" },
@@ -204,7 +204,9 @@ function cardHtml(c) {
     // memo:true のカードは視覚資料を自由入力できる（任意）
     const memoRow = `<div class="crow"><span class="rlabel">視覚資料</span>`
       + `<input class="memo" data-memo="${c.key}" type="text" placeholder="任意" autocapitalize="off" autocorrect="off"></div>`;
-    // 食事など price/place/who:true のカードは価格・場所（外食）・同席者を記録できる（いずれも任意）
+    // 食事など content/price/place/who:true のカードは内容・価格・場所（外食）・同席者を記録できる（いずれも任意）
+    const contentRow = `<div class="crow"><span class="rlabel">内容</span>`
+      + `<input class="memo" data-content="${c.key}" type="text" placeholder="食べたもの（任意）" autocapitalize="off" autocorrect="off"></div>`;
     const priceRow = `<div class="crow"><span class="rlabel">価格</span>`
       + `<input class="memo" data-price="${c.key}" type="number" inputmode="numeric" placeholder="任意"><span class="rsuffix">円</span></div>`;
     const placeRow = `<div class="crow"><span class="rlabel">場所</span>`
@@ -216,7 +218,7 @@ function cardHtml(c) {
       + c.checks.map(ch => `<button class="cbtn" data-k="${c.key}" data-check="${ch.k}">${ch.label}</button>`).join("") + `</div>` : "";
     btns = checkRow + starRow("amount", "量") + starRow("quality", "質")
       + (c.sex ? sexRow : "") + (c.memo ? memoRow : "")
-      + (c.price ? priceRow : "") + (c.place ? placeRow : "") + (c.who ? whoRow : "")
+      + (c.content ? contentRow : "") + (c.price ? priceRow : "") + (c.place ? placeRow : "") + (c.who ? whoRow : "")
       + `<button class="cbtn rec" data-k="${c.key}" data-rec2="1">＋ 記録</button><button class="cbtn undo" data-k="${c.key}" data-undo="1">取消</button>`;
     const aAvg = avgRating(c.key, 30, "amount"), qAvg = avgRating(c.key, 30, "quality");
     stats = `直近7日 <b>${w}</b>${unit} ／ 30日 <b>${m}</b>${unit}${aAvg ? ` ／ 量平均 <b>★${aAvg.toFixed(1)}</b>` : ""}${qAvg ? ` ／ 質平均 <b>★${qAvg.toFixed(1)}</b>` : ""}`;
@@ -225,6 +227,7 @@ function cardHtml(c) {
       + `<select data-retro-quality><option value="" selected>質 未選択</option>${[5, 4, 3, 2, 1].map(v => `<option value="${v}">質★${v}</option>`).join("")}</select>`
       + (c.sex ? `<select data-retro-sex><option value="0" selected>接触なし</option><option value="1">接触あり</option></select>` : "")
       + (c.memo ? `<input class="memo" data-retro-memo type="text" placeholder="任意" autocapitalize="off" autocorrect="off">` : "")
+      + (c.content ? `<input class="memo" data-retro-content type="text" placeholder="内容（任意）" autocapitalize="off" autocorrect="off">` : "")
       + (c.price ? `<input class="memo" data-retro-price type="number" inputmode="numeric" placeholder="価格（任意）">` : "")
       + (c.place ? `<input class="memo" data-retro-place type="text" placeholder="場所（任意）" autocapitalize="off" autocorrect="off">` : "")
       + (c.who ? `<input class="memo" data-retro-who type="text" placeholder="誰と（任意）" autocapitalize="off" autocorrect="off">` : "");
@@ -239,7 +242,7 @@ function cardHtml(c) {
       <div class="cbig"><span class="cval">${bigval}</span><span class="cunit">${biglabel}</span></div>
       <div class="cbtns">${btns}${retro ? `<button class="cbtn undo" data-retro-open="${c.key}">遡って記録</button>` : ""}</div>
       <div class="cstats">${stats}</div>
-      <div class="clast">${last ? "最終記録 " + fmtTime(last.ts) + (last.rating ? `（★${last.rating}）` : "") + (last.amount ? `（量★${last.amount}・質★${last.quality || "-"}${last.sex != null ? (last.sex ? "・接触あり" : "・接触なし") : ""}）${(last.small || last.large) ? " " + [last.small ? "小" : "", last.large ? "大" : ""].filter(Boolean).join("・") : ""}` : "") + (last.mood ? `（${last.mood}/5）` : "") + (last.price != null ? ` ${last.price}円` : "") + (last.place ? ` 場所: ${esc(last.place)}` : "") + (last.who ? ` 誰と: ${esc(last.who)}` : "") + (last.memo ? ` 視覚資料: ${esc(last.memo)}` : "") : "本日の記録なし"}</div>
+      <div class="clast">${last ? "最終記録 " + fmtTime(last.ts) + (last.rating ? `（★${last.rating}）` : "") + (last.amount ? `（量★${last.amount}・質★${last.quality || "-"}${last.sex != null ? (last.sex ? "・接触あり" : "・接触なし") : ""}）${(last.small || last.large) ? " " + [last.small ? "小" : "", last.large ? "大" : ""].filter(Boolean).join("・") : ""}` : "") + (last.mood ? `（${last.mood}/5）` : "") + (last.content ? ` 内容: ${esc(last.content)}` : "") + (last.price != null ? ` ${last.price}円` : "") + (last.place ? ` 場所: ${esc(last.place)}` : "") + (last.who ? ` 誰と: ${esc(last.who)}` : "") + (last.memo ? ` 視覚資料: ${esc(last.memo)}` : "") : "本日の記録なし"}</div>
       ${retro ? `<div class="retro" data-retro="${c.key}"><label>過去の日時を指定して記録</label><div class="rrow"><input type="datetime-local" data-retro-dt>${retroExtra}<button class="cbtn rec" data-retro-submit="${c.key}">記録</button></div></div>` : ""}
     </div>`;
 }
@@ -274,6 +277,8 @@ box.addEventListener("click", e => {
       if (sexSel) extra.sex = sexSel.value === "1"; // 既定「なし」
       const memoEl = p.querySelector("[data-retro-memo]");
       if (memoEl && memoEl.value.trim()) extra.memo = memoEl.value.trim();
+      const contentEl = p.querySelector("[data-retro-content]");
+      if (contentEl && contentEl.value.trim()) extra.content = contentEl.value.trim();
       const priceEl = p.querySelector("[data-retro-price]");
       if (priceEl && priceEl.value.trim() !== "" && !isNaN(Number(priceEl.value))) extra.price = Number(priceEl.value);
       const placeEl = p.querySelector("[data-retro-place]");
@@ -310,6 +315,8 @@ box.addEventListener("click", e => {
     if (sx) extra.sex = sx.dataset.sex === "1";
     const memoEl = card.querySelector("[data-memo]");
     if (memoEl && memoEl.value.trim()) extra.memo = memoEl.value.trim();
+    const contentEl = card.querySelector("[data-content]");
+    if (contentEl && contentEl.value.trim()) extra.content = contentEl.value.trim();
     const priceEl = card.querySelector("[data-price]");
     if (priceEl && priceEl.value.trim() !== "" && !isNaN(Number(priceEl.value))) extra.price = Number(priceEl.value);
     const placeEl = card.querySelector("[data-place]");
