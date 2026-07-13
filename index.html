@@ -185,9 +185,9 @@ const COUNTERS = [
   { key: "toilet", name: "Restroom", emoji: "🚽", type: "rated2", unit: "回", checks: [{ k: "small", label: "小" }, { k: "large", label: "大" }] },
   { key: "ejac",  name: "Release",  emoji: "💧", type: "rated2", unit: "回", sex: true, memo: true, group: "private" },
   { key: "meds_routine", name: "服薬まとめ", emoji: "✅", type: "routine", routines: [
-    { label: "朝", keys: ["cepharanthin", "betamethasone", "zinc", "dha"], note: "セファ・ベタ・亜鉛・DHA" },
-    { label: "昼", keys: ["cepharanthin"], note: "セファ" },
-    { label: "夜", keys: ["cepharanthin", "betamethasone", "epinastine", "dha"], note: "セファ・ベタ・エピナ・DHA" },
+    { label: "朝", keys: ["cepharanthin", "betamethasone", "zinc", "dha"] },
+    { label: "昼", keys: ["cepharanthin"] },
+    { label: "夜", keys: ["cepharanthin", "betamethasone", "epinastine", "dha"] },
   ] },
   { key: "ibuprofen", name: "Ibuprofen", emoji: "💊", type: "dose", unit: "回", dose: 150, doseUnit: "mg", reasonDefault: "頭痛", confirm: true, group: "meds" },
   { key: "cepharanthin", name: "セファランチン", emoji: "💊", type: "count", unit: "錠", perDay: 3, sched: "朝・昼・晩", confirm: true, group: "meds" },
@@ -370,9 +370,11 @@ function routineCardHtml(c) {
   const rows = c.routines.map(r => {
     // その時間帯の全薬に今日 slot 付きの記録があれば「済」表示（まとめボタン経由分の判定）
     const done = r.keys.every(k => todayEvents(k).some(e => e.slot === r.label));
+    // 薬名は各薬の定義（COUNTERS）の正式名から生成する（省略せず・名称変更にも自動追従）
+    const note = r.keys.map(k => (COUNTERS.find(c => c.key === k) || {}).name || k).join("・");
     return `<div class="crow"><span class="rlabel">${r.label}${done ? " ✅" : ""}</span>`
       + `<button class="cbtn rec" data-routine-keys="${r.keys.join(",")}" data-routine-slot="${r.label}" data-confirm="1">まとめて記録</button>`
-      + `<span class="rnote">${r.note}</span></div>`;
+      + `<span class="rnote">${note}</span></div>`;
   }).join("");
   return `<div class="counter" data-key="${c.key}">
     <div class="chead"><span class="cemoji">${c.emoji}</span><span class="cname">${c.name}</span></div>
