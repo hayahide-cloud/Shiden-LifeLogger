@@ -60,6 +60,7 @@
   .cval { font-size: 34px; font-weight: 700; font-variant-numeric: tabular-nums; }
   .cunit { font-size: 13px; color: var(--muted); }
   .cbtns { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
+  .brk { flex-basis: 100%; height: 0; margin: 0; } /* flex-wrap内で強制改行するスペーサー */
   .cbtn { cursor: pointer; font-family: inherit; font-size: 15px; font-weight: 700; line-height: 1; border: 1px solid var(--border); border-radius: 11px; background: var(--surface-2); color: var(--ink); padding: 12px 14px; }
   .cbtn.rec { background: linear-gradient(135deg, var(--accent-deep), var(--accent)); color: #fff; border: none; }
   .cbtn.undo { color: var(--muted); font-size: 13px; font-weight: 600; }
@@ -233,7 +234,9 @@ function cardHtml(c) {
     bigval = cur ? (MOODS.find(x => x.v === cur) || {}).e : "—";
     biglabel = cur ? "今の気分（" + cur + "/5）" : "未記録";
     // 気分を選んでから「＋記録」で確定する（誤タップでの記録を防ぐ）。初期選択なし
+    // 絵文字の選択列と操作ボタン列を .brk（全幅スペーサー）で改行して分ける
     btns = MOODS.map(x => `<button class="cbtn" data-k="${c.key}" data-moodsel="${x.v}">${x.e}</button>`).join("")
+      + `<div class="brk"></div>`
       + `<button class="cbtn rec" data-k="${c.key}" data-recmood="1">＋ 記録</button>`
       + `<button class="cbtn undo" data-k="${c.key}" data-undo="1">取消</button>`;
     stats = `今日 <b>${today.length}</b>回記録 ／ 直近7日 <b>${w}</b>回`;
