@@ -31,9 +31,9 @@
     <path d="M296 36 L138 296 L238 296 L198 476 L396 208 L286 208 L352 36 Z" fill="none" stroke="#f5f2fa" stroke-width="72" stroke-linejoin="round"/>
     <path d="M296 36 L138 296 L238 296 L198 476 L396 208 L286 208 L352 36 Z" fill="url(#bolt)" stroke="url(#edge)" stroke-width="40" stroke-linejoin="round"/>
   </g>
-  <!-- 小さいハート（ピンク・白フチ）を右下コーナーにアクセント配置。中心(398,404)・0.30倍 -->
-  <g transform="translate(398 404) scale(0.30) translate(-256 -226)" filter="url(#hsh)">
-    <path d="M256 150 C256 108 222 80 182 80 C128 80 92 122 92 174 C92 246 158 298 256 372 C354 298 420 246 420 174 C420 122 384 80 330 80 C290 80 256 108 256 150 Z" fill="none" stroke="#fff" stroke-width="34" stroke-linejoin="round"/>
+  <!-- ハート（ピンク・白フチ）を右下コーナーにアクセント配置。中心(391,401)・0.42倍。雷の裾と少し重なる -->
+  <g transform="translate(391 401) scale(0.42) translate(-256 -226)" filter="url(#hsh)">
+    <path d="M256 150 C256 108 222 80 182 80 C128 80 92 122 92 174 C92 246 158 298 256 372 C354 298 420 246 420 174 C420 122 384 80 330 80 C290 80 256 108 256 150 Z" fill="none" stroke="#fff" stroke-width="30" stroke-linejoin="round"/>
     <path d="M256 150 C256 108 222 80 182 80 C128 80 92 122 92 174 C92 246 158 298 256 372 C354 298 420 246 420 174 C420 122 384 80 330 80 C290 80 256 108 256 150 Z" fill="url(#hpink)"/>
   </g>
 </svg>
