@@ -21,12 +21,12 @@
   </defs>
   <rect width="512" height="512" fill="url(#bgr)"/>
   <!-- 人体シルエット（Tポーズ：頭・両腕を水平に広げ・胴・脚が一体の塗り。角は同色の丸ストロークで丸める。
-       両手を左右に張り出すことで雷（縦）に埋もれず手が見える。脚は開いて股を確保。
-       領収書と同じ -23.4° 傾き＋中心基準で1.15倍。雷がこの身体を貫く構図） -->
-  <g transform="rotate(-23.4 256 256) translate(256 256) scale(1.15) translate(-256 -256)" opacity="0.97"
+       両手を左右に張り出すことで雷（縦）に埋もれず手が見える。脚は左右に大きく開き股を深く確保。
+       領収書と同じ -23.4° 傾き＋中心基準で1.22倍。雷がこの身体を貫く構図） -->
+  <g transform="rotate(-23.4 256 256) translate(256 256) scale(1.22) translate(-256 -256)" opacity="0.97"
      fill="#efeaf7" stroke="#efeaf7" stroke-width="20" stroke-linejoin="round" stroke-linecap="round">
-    <circle cx="256" cy="100" r="44" stroke="none"/>
-    <path d="M240 150 L214 176 L124 180 L120 212 L214 208 L218 300 L208 448 L240 448 L247 322 L256 312 L265 322 L272 448 L304 448 L294 300 L298 208 L388 212 L392 180 L298 176 L272 150 Z"/>
+    <circle cx="256" cy="98" r="44" stroke="none"/>
+    <path d="M240 150 L214 176 L124 180 L120 212 L214 208 L216 300 L200 452 L232 452 L248 316 L256 300 L264 316 L280 452 L312 452 L296 300 L298 208 L388 212 L392 180 L298 176 L272 150 Z"/>
   </g>
   <!-- 雷（紫電Expense と完全に同一） -->
   <g transform="translate(48 56) scale(0.78)" filter="url(#sh)">
