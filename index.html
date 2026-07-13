@@ -434,8 +434,8 @@ function cardHtml(c) {
     // トイレなど checks:true のカードは小・大などの区分を複数選択できる（いずれか必須）
     const checkRow = c.checks ? `<div class="crow"><span class="rlabel">区分</span>`
       + c.checks.map(ch => `<button class="cbtn" data-k="${c.key}" data-check="${ch.k}">${ch.label}</button>`).join("") + `</div>` : "";
-    btns = checkRow + starRow("amount", "量") + starRow("quality", "質")
-      + (c.sex ? sexRow : "") + (c.memo ? memoRow : "")
+    btns = checkRow + (c.sex ? sexRow : "") + starRow("amount", "量") + starRow("quality", "質")
+      + (c.memo ? memoRow : "")
       + (c.content ? contentRow : "") + (c.price ? priceRow : "") + (c.place ? placeRow : "") + (c.who ? whoRow : "")
       + `<button class="cbtn rec" data-k="${c.key}" data-rec2="1">＋ 記録</button>`;
     const aAvg = avgRating(c.key, 30, "amount"), qAvg = avgRating(c.key, 30, "quality");
