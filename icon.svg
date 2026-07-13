@@ -26,7 +26,7 @@
   <g transform="translate(-12 -32) rotate(-23.4 256 256) translate(256 256) scale(1.15) translate(-256 -256)" opacity="0.97"
      fill="#efeaf7" stroke="#efeaf7" stroke-width="20" stroke-linejoin="round" stroke-linecap="round">
     <circle cx="256" cy="150" r="42" stroke="none"/>
-    <path d="M238 176 L216 188 L138 104 L116 124 L212 216 L216 322 L200 462 L232 462 L248 340 L256 328 L264 340 L280 462 L312 462 L296 322 L300 216 L396 124 L374 104 L296 188 L274 176 Z"/>
+    <path d="M238 176 L216 188 L138 104 L116 124 L212 216 L216 322 L188 462 L220 462 L248 340 L256 328 L264 340 L292 462 L324 462 L296 322 L300 216 L396 124 L374 104 L296 188 L274 176 Z"/>
   </g>
   <!-- 雷（紫電Expense と完全に同一） -->
   <g transform="translate(48 56) scale(0.78)" filter="url(#sh)">

@@ -39,11 +39,9 @@
   }
   .wrap { max-width: 720px; margin: 0 auto; }
   header { margin-bottom: 22px; text-align: center; padding-top: 4px; }
-  h1 {
-    font-size: 25px; font-weight: 800; color: #fff; letter-spacing: 0.01em;
-    display: inline-flex; align-items: center; gap: 9px; justify-content: center;
-  }
-  h1 .logo-badge { width: 30px; height: 30px; flex: none; }
+  h1 { font-size: 25px; font-weight: 800; color: #fff; letter-spacing: 0.01em; }
+  /* Expenseと同じく、バッジはインライン＋vertical-alignでテキストのベースラインに合わせる（縦位置を一致させる） */
+  h1 .logo-badge { width: 30px; height: 30px; vertical-align: -0.17em; margin-right: 9px; }
   h1 .brand-grad {
     background: linear-gradient(90deg, #a78bfa, #7c3aed);
     -webkit-background-clip: text; background-clip: text; -webkit-text-fill-color: transparent;
