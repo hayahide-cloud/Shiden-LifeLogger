@@ -148,6 +148,9 @@ const COUNTERS = [
   { key: "toilet", name: "Restroom", emoji: "🚽", type: "rated2", unit: "回", checks: [{ k: "small", label: "小" }, { k: "large", label: "大" }] },
   { key: "ejac",  name: "Release",  emoji: "💧", type: "rated2", unit: "回", sex: true, memo: true },
   { key: "ibuprofen", name: "Ibuprofen", emoji: "💊", type: "dose", unit: "回", dose: 150, doseUnit: "mg", reasonDefault: "頭痛" },
+  { key: "cepharanthin", name: "セファランチン", emoji: "💊", type: "count", unit: "錠", perDay: 3, sched: "朝・昼・晩" },
+  { key: "epinastine", name: "エピナスチン", emoji: "💊", type: "count", unit: "錠", perDay: 1, sched: "晩のみ" },
+  { key: "betamethasone", name: "ベタメタゾンローション", emoji: "🧴", type: "count", unit: "回", perDay: 2, sched: "朝・晩" },
   { key: "smoke", name: "Smoke",  emoji: "🚬", type: "count", unit: "本", goal: "Reduce", confirm: true },
 ];
 const MOODS = [{ v: 1, e: "😣" }, { v: 2, e: "😕" }, { v: 3, e: "😐" }, { v: 4, e: "🙂" }, { v: 5, e: "😄" }];
@@ -238,11 +241,11 @@ function summ(e) {
   return p.join(" ／ ") || "記録";
 }
 
-// 1日のグラフ用: 折れ線＋点 / 点のみ（中抜き）
-function dgLine(pts, color) {
+// 1日のグラフ用: 折れ線＋点（hollow=true で中抜き点） / 点のみ
+function dgLine(pts, color, hollow) {
   if (!pts.length) return "";
   const path = pts.map((p, i) => (i ? "L" : "M") + p.x.toFixed(1) + " " + p.y.toFixed(1)).join(" ");
-  const dots = pts.map(p => `<circle cx="${p.x.toFixed(1)}" cy="${p.y.toFixed(1)}" r="2.4" fill="${color}"/>`).join("");
+  const dots = pts.map(p => `<circle cx="${p.x.toFixed(1)}" cy="${p.y.toFixed(1)}" r="2.4" fill="${hollow ? "none" : color}"${hollow ? ` stroke="${color}" stroke-width="1.5"` : ""}/>`).join("");
   return `<path d="${path}" fill="none" stroke="${color}" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/>${dots}`;
 }
 // filled=true で塗りつぶし点、false で中抜き点（線でつながない＝独立イベント向け）
@@ -271,10 +274,9 @@ function dayGraphSvg(evs, type) {
   } else if (type === "mood") {
     series = dgLine(evs.filter(e => e.mood).map(e => ({ x: xOf(e.ts), y: yOf(e.mood) })), "var(--accent-hi)");
   } else if (type === "rated2" || type === "rated2line") {
-    // 量=塗り点・質=中抜き点。rated2line は量を折れ線でつなぐ（順序を追いやすくするため）
-    const amtPts = evs.filter(e => e.amount).map(e => ({ x: xOf(e.ts), y: yOf(e.amount) }));
-    series = (type === "rated2line" ? dgLine(amtPts, "var(--accent)") : dgDots(amtPts, "var(--accent)", true))
-      + dgDots(evs.filter(e => e.quality).map(e => ({ x: xOf(e.ts), y: yOf(e.quality) })), "var(--good)", false);
+    // 量・質とも折れ線でつなぐ（順序を追いやすく）。量=塗り点、質=中抜き点で区別
+    series = dgLine(evs.filter(e => e.amount).map(e => ({ x: xOf(e.ts), y: yOf(e.amount) })), "var(--accent)")
+      + dgLine(evs.filter(e => e.quality).map(e => ({ x: xOf(e.ts), y: yOf(e.quality) })), "var(--good)", true);
   } else if (type === "rated") {
     series = dgLine(evs.filter(e => e.rating).map(e => ({ x: xOf(e.ts), y: yOf(e.rating) })), "var(--accent)");
   } else if (type === "water") { // 各回の飲水量(mL)を点で。基準は1000mL（超える日はその日の最大に合わせる）
@@ -380,9 +382,12 @@ function cardHtml(c) {
       + `<button class="cbtn rec" data-dose-rec="${c.key}">＋ 記録</button>`;
     stats = `今日 <b>${todayEvents(c.key).length}</b>回 ／ 直近7日 <b>${w}</b>回 ／ 30日 <b>${m}</b>回`;
     retroExtra = `<input class="memo" data-retro-dose type="number" inputmode="numeric" placeholder="用量(${du})"><input class="memo" data-retro-reason type="text" placeholder="理由（任意）" autocapitalize="off" autocorrect="off">`;
-  } else {
+  } else { // count型（喫煙・定期薬など）
     btns = `<button class="cbtn rec" data-k="${c.key}" data-rec="1"${c.confirm ? ' data-confirm="1"' : ''}>＋ 記録</button>`;
-    stats = `直近7日 <b>${w}</b>${unit} ／ 30日 <b>${m}</b>${unit}`;
+    if (c.perDay) biglabel = `／ ${c.perDay}${unit}（今日）`; // 定期薬は1日の目標回数を併記
+    stats = c.sched
+      ? `服用: ${c.sched} ／ 今日 <b>${today.length}</b>${unit} ／ 直近7日 <b>${w}</b>${unit}`
+      : `直近7日 <b>${w}</b>${unit} ／ 30日 <b>${m}</b>${unit}`;
   }
 
   const evs = events(c.key).slice().reverse(); // 新しい順
@@ -394,12 +399,14 @@ function cardHtml(c) {
     <div class="counter" data-key="${c.key}">
       <div class="chead"><span class="cemoji">${c.emoji}</span><span class="cname">${c.name}</span>${c.goal ? `<span class="cgoal">目標: ${c.goal}</span>` : ""}</div>
       <div class="cbig"><span class="cval">${bigval}</span><span class="cunit">${biglabel}</span></div>
-      <div class="cbtns">${btns}${retro ? `<button class="cbtn undo" data-retro-open="${c.key}">${c.type === "water" ? "遡って飲み始め" : "遡って記録"}</button>` : ""}<button class="cbtn undo" data-hist-open="${c.key}">履歴</button></div>
+      <div class="cbtns">${btns}${retro ? `<button class="cbtn undo" data-retro-open="${c.key}">遡って記録</button>` : ""}<button class="cbtn undo" data-hist-open="${c.key}">履歴</button></div>
       <div class="cstats">${stats}</div>
       <div class="hist" data-hist="${c.key}">${histRows}</div>
       ${dayGraph(c)}
       <div class="clast">${last ? "最終記録 " + fmtTime(last.ts) + (last.rating ? `（★${last.rating}）` : "") + (last.amount ? `（量★${last.amount}・質★${last.quality || "-"}${last.sex != null ? (last.sex ? "・接触あり" : "・接触なし") : ""}）${(last.small || last.large) ? " " + [last.small ? "小" : "", last.large ? "大" : ""].filter(Boolean).join("・") : ""}` : "") + (last.mood ? `（${last.mood}/5）` : "") + (last.content ? ` 内容: ${esc(last.content)}` : "") + (last.price != null ? ` ${last.price}円` : "") + (last.place ? ` 場所: ${esc(last.place)}` : "") + (last.who ? ` 誰と: ${esc(last.who)}` : "") + (last.memo ? ` 視覚資料: ${esc(last.memo)}` : "") + (last.ml != null ? ` ${last.ml}mL` : "") + (last.mg != null ? ` ${last.mg}mg` : "") + (last.reason ? ` ${esc(last.reason)}` : "") : "本日の記録なし"}</div>
-      ${retro ? `<div class="retro" data-retro="${c.key}"><label class="retro-label">${c.type === "water" ? "過去の時刻で飲み始め（継続中にする）" : "過去の日時を指定して記録"}</label><div class="rrow"><input type="datetime-local" data-retro-dt>${retroExtra}<button class="cbtn rec" data-retro-submit="${c.key}">${c.type === "water" ? "飲み始め" : "記録"}</button><button class="cbtn undo" data-canceledit="${c.key}" style="display:none">キャンセル</button></div></div>` : ""}
+      ${retro ? `<div class="retro" data-retro="${c.key}"><label class="retro-label">${c.type === "water" ? "過去の時刻で飲み始め（継続中）／飲み終わり（記録）" : "過去の日時を指定して記録"}</label><div class="rrow"><input type="datetime-local" data-retro-dt>${retroExtra}${c.type === "water"
+        ? `<button class="cbtn rec" data-wstart="${c.key}">飲み始め</button><button class="cbtn rec" data-wfinish="${c.key}">飲み終わり</button><button class="cbtn rec" data-retro-submit="${c.key}" style="display:none">更新</button>`
+        : `<button class="cbtn rec" data-retro-submit="${c.key}">記録</button>`}<button class="cbtn undo" data-canceledit="${c.key}" style="display:none">キャンセル</button></div></div>` : ""}
     </div>`;
 }
 // 編集モード: 遡って記録フォームを対象記録の値で埋め、送信を「更新」に切り替える
@@ -423,7 +430,9 @@ function fillEditForm(card, e) {
   set("[data-retro-dose]", e.mg != null ? String(e.mg) : "");
   set("[data-retro-reason]", e.reason || "");
   p.querySelectorAll("[data-retro-check]").forEach(ch => ch.checked = !!e[ch.dataset.retroCheck]);
-  const submit = p.querySelector("[data-retro-submit]"); if (submit) submit.textContent = "更新";
+  // 水の新規用ボタン（飲み始め/飲み終わり）は編集時は隠し、更新ボタンを出す
+  p.querySelectorAll("[data-wstart],[data-wfinish]").forEach(el => el.style.display = "none");
+  const submit = p.querySelector("[data-retro-submit]"); if (submit) { submit.textContent = "更新"; submit.style.display = ""; }
   const lbl = p.querySelector(".retro-label"); if (lbl) lbl.textContent = "この記録を修正（日時も変更可）";
   const cancel = p.querySelector("[data-canceledit]"); if (cancel) cancel.style.display = "";
 }
@@ -507,8 +516,7 @@ box.addEventListener("click", e => {
       if (whoEl && whoEl.value.trim()) extra.who = whoEl.value.trim();
     }
     const hasChecks = !!p.querySelector("[data-retro-check]");
-    if (editing && editing.key === key) { updateEvent(key, editing.id, extra, ts); editing = null; } // 編集は単一レコードを更新
-    else if (mlSel) { setPending(key, { start: ts, ml: extra.ml }); render(); } // 水: 新規は過去の時刻で「飲み始め」（継続中にする）
+    if (editing && editing.key === key) { updateEvent(key, editing.id, extra, ts); editing = null; } // 編集は単一レコードを更新（水の新規は data-wstart/wfinish で処理）
     else if (hasChecks) { recordToilet(key, extra.amount, extra.quality, !!extra.small, !!extra.large, ts); } // 新規は大→小を副次追加
     else record(key, extra, ts);
     return;
@@ -592,6 +600,17 @@ box.addEventListener("click", e => {
     return record(k, pend ? { ml, start: pend.start } : { ml }); // 記録時刻=飲み終わり
   }
   if (btn.dataset.waterCancel) { setPending(btn.dataset.waterCancel, null); return render(); }
+  // 水: 遡って飲み始め（過去時刻でpending）／遡って飲み終わり（過去時刻で記録）
+  if (btn.dataset.wstart || btn.dataset.wfinish) {
+    const k = btn.dataset.wstart || btn.dataset.wfinish, rp = box.querySelector(`.retro[data-retro="${k}"]`);
+    const dtEl = rp.querySelector("[data-retro-dt]"), mlEl = rp.querySelector("[data-retro-ml]");
+    if (!dtEl.value) { alert("日時を入力してください。"); return; }
+    if (mlEl.value.trim() === "" || isNaN(Number(mlEl.value))) { alert("mLを入力してください。"); return; }
+    const ts = new Date(dtEl.value).toISOString(), ml = Number(mlEl.value);
+    if (btn.dataset.wstart) { setPending(k, { start: ts, ml }); return render(); }
+    const pend = getPending()[k]; setPending(k, null); // 飲み終わり: 継続中があれば開始を引き継ぐ
+    return record(k, pend ? { ml, start: pend.start } : { ml }, ts);
+  }
   // 服薬: 用量(mg)＋理由を即記録
   if (btn.dataset.doseRec) {
     const k = btn.dataset.doseRec, card = btn.closest(".counter");
