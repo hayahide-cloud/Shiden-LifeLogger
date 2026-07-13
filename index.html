@@ -99,6 +99,9 @@
   /* 入力欄が潰れて1文字幅にならないよう最小幅を確保し、狭い画面では折り返して大きく表示する */
   .rrow input, .rrow select { flex: 1 1 8.5em; min-width: 8em; }
   .rrow input[type="datetime-local"] { flex: 1 1 11em; min-width: 10.5em; }
+  /* 日時の微調整ボタン（PCのスクロールに頼らず分単位で合わせる） */
+  .dtadj { display: inline-flex; gap: 4px; flex: none; }
+  .cbtn.adj { font-size: 13px; font-weight: 600; padding: 8px 9px; min-width: 2.4em; }
 
   footer { color: var(--muted); font-size: 11px; text-align: center; margin-top: 8px; }
 </style>
@@ -151,6 +154,8 @@ const COUNTERS = [
   { key: "cepharanthin", name: "セファランチン", emoji: "💊", type: "count", unit: "錠", perDay: 3, sched: "朝・昼・晩" },
   { key: "epinastine", name: "エピナスチン", emoji: "💊", type: "count", unit: "錠", perDay: 1, sched: "晩のみ" },
   { key: "betamethasone", name: "ベタメタゾンローション", emoji: "🧴", type: "count", unit: "回", perDay: 2, sched: "朝・晩" },
+  { key: "zinc", name: "亜鉛", emoji: "💊", type: "count", unit: "回", perDay: 1, sched: "1日1回" },
+  { key: "dha",  name: "DHA", emoji: "🐟", type: "count", unit: "回", perDay: 2, sched: "1日2回" },
   { key: "smoke", name: "Smoke",  emoji: "🚬", type: "count", unit: "本", goal: "Reduce", confirm: true },
 ];
 const MOODS = [{ v: 1, e: "😣" }, { v: 2, e: "😕" }, { v: 3, e: "😐" }, { v: 4, e: "🙂" }, { v: 5, e: "😄" }];
@@ -181,7 +186,9 @@ function todayEvents(k) { return events(k).filter(e => isToday(e.ts)); }
 function fmtTime(ts) { const d = new Date(ts); return String(d.getHours()).padStart(2, "0") + ":" + String(d.getMinutes()).padStart(2, "0"); }
 function avgRating(k, n, field) { field = field || "rating"; const f = sinceDays(n); const rs = events(k).filter(e => new Date(e.ts).getTime() >= f && e[field]).map(e => e[field]); return rs.length ? rs.reduce((s, r) => s + r, 0) / rs.length : 0; }
 function todayMood(k) { const ms = todayEvents(k).filter(e => e.mood).map(e => e.mood); return ms.length ? ms[ms.length - 1] : 0; }
-function nowLocalInput() { const d = new Date(); d.setMinutes(d.getMinutes() - d.getTimezoneOffset()); return d.toISOString().slice(0, 16); }
+function nowLocalInput() { return toLocalInput(new Date()); }
+// Date を datetime-local 入力用のローカル時刻文字列(YYYY-MM-DDTHH:MM)に変換
+function toLocalInput(d) { const x = new Date(d); x.setMinutes(x.getMinutes() - x.getTimezoneOffset()); return x.toISOString().slice(0, 16); }
 
 // mt=更新時刻(ms)。同期マージで新しい編集が古いリモート版に上書きされないための版管理
 function record(key, extra, tsIso) {
@@ -404,7 +411,7 @@ function cardHtml(c) {
       <div class="hist" data-hist="${c.key}">${histRows}</div>
       ${dayGraph(c)}
       <div class="clast">${last ? "最終記録 " + fmtTime(last.ts) + (last.rating ? `（★${last.rating}）` : "") + (last.amount ? `（量★${last.amount}・質★${last.quality || "-"}${last.sex != null ? (last.sex ? "・接触あり" : "・接触なし") : ""}）${(last.small || last.large) ? " " + [last.small ? "小" : "", last.large ? "大" : ""].filter(Boolean).join("・") : ""}` : "") + (last.mood ? `（${last.mood}/5）` : "") + (last.content ? ` 内容: ${esc(last.content)}` : "") + (last.price != null ? ` ${last.price}円` : "") + (last.place ? ` 場所: ${esc(last.place)}` : "") + (last.who ? ` 誰と: ${esc(last.who)}` : "") + (last.memo ? ` 視覚資料: ${esc(last.memo)}` : "") + (last.ml != null ? ` ${last.ml}mL` : "") + (last.mg != null ? ` ${last.mg}mg` : "") + (last.reason ? ` ${esc(last.reason)}` : "") : "本日の記録なし"}</div>
-      ${retro ? `<div class="retro" data-retro="${c.key}"><label class="retro-label">${c.type === "water" ? "過去の時刻で飲み始め（継続中）／飲み終わり（記録）" : "過去の日時を指定して記録"}</label><div class="rrow"><input type="datetime-local" data-retro-dt>${retroExtra}${c.type === "water"
+      ${retro ? `<div class="retro" data-retro="${c.key}"><label class="retro-label">${c.type === "water" ? "過去の時刻で飲み始め（継続中）／飲み終わり（記録）" : "過去の日時を指定して記録"}</label><div class="rrow"><input type="datetime-local" data-retro-dt><span class="dtadj"><button class="cbtn adj" data-dtadj="-5">−5</button><button class="cbtn adj" data-dtadj="-1">−1</button><button class="cbtn adj" data-dtadj="1">+1</button><button class="cbtn adj" data-dtadj="5">+5</button><button class="cbtn adj" data-dtnow="1">今</button></span>${retroExtra}${c.type === "water"
         ? `<button class="cbtn rec" data-wstart="${c.key}">飲み始め</button><button class="cbtn rec" data-wfinish="${c.key}">飲み終わり</button><button class="cbtn rec" data-retro-submit="${c.key}" style="display:none">更新</button>`
         : `<button class="cbtn rec" data-retro-submit="${c.key}">記録</button>`}<button class="cbtn undo" data-canceledit="${c.key}" style="display:none">キャンセル</button></div></div>` : ""}
     </div>`;
@@ -452,6 +459,14 @@ box.addEventListener("click", e => {
     if (editing) { editing = null; render(); } // 通常の遡って記録に戻す
     const p = box.querySelector(`.retro[data-retro="${btn.dataset.retroOpen}"]`);
     if (p) { p.classList.toggle("open"); const dt = p.querySelector("[data-retro-dt]"); if (p.classList.contains("open") && dt && !dt.value) dt.value = nowLocalInput(); }
+    return;
+  }
+  if (btn.dataset.dtadj || btn.dataset.dtnow) { // 日時の微調整（スクロール不要で分単位に合わせる）
+    const dtEl = btn.closest(".rrow").querySelector("[data-retro-dt]");
+    if (btn.dataset.dtnow) { dtEl.value = nowLocalInput(); return; }
+    const base = dtEl.value ? new Date(dtEl.value) : new Date();
+    base.setMinutes(base.getMinutes() + Number(btn.dataset.dtadj));
+    dtEl.value = toLocalInput(base);
     return;
   }
   if (btn.dataset.histOpen) { // 履歴パネルの開閉
