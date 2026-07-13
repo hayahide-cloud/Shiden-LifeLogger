@@ -257,6 +257,12 @@ function merge(local, remote) {
   });
   return { events, deleted: [...del] };
 }
+async function syncOnce(c) {
+  const remote = await ghGet(c);
+  const merged = merge({ events: all(), deleted: deleted() }, remote.data);
+  save(merged.events); saveDeleted(merged.deleted);
+  await ghPut(c, merged, remote.sha);
+}
 let syncing = false, syncTimer = null;
 async function sync() {
   const c = getCfg();
@@ -264,10 +270,8 @@ async function sync() {
   if (syncing) return;
   syncing = true; status("同期中…");
   try {
-    const remote = await ghGet(c);
-    const merged = merge({ events: all(), deleted: deleted() }, remote.data);
-    save(merged.events); saveDeleted(merged.deleted);
-    await ghPut(c, merged, remote.sha);
+    try { await syncOnce(c); }
+    catch (e) { if (/\b409\b/.test(e.message)) { await syncOnce(c); } else { throw e; } } // 競合時は最新SHAで1回再試行
     render(); status("同期完了 " + hhmm());
   } catch (e) { status("同期失敗: " + e.message); } finally { syncing = false; }
 }
