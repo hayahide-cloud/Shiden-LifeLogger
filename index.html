@@ -234,8 +234,9 @@ function dgLine(pts, color) {
   const dots = pts.map(p => `<circle cx="${p.x.toFixed(1)}" cy="${p.y.toFixed(1)}" r="2.4" fill="${color}"/>`).join("");
   return `<path d="${path}" fill="none" stroke="${color}" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/>${dots}`;
 }
-function dgDots(pts, color) {
-  return pts.map(p => `<circle cx="${p.x.toFixed(1)}" cy="${p.y.toFixed(1)}" r="2.2" fill="none" stroke="${color}" stroke-width="1.4"/>`).join("");
+// filled=true で塗りつぶし点、false で中抜き点（線でつながない＝独立イベント向け）
+function dgDots(pts, color, filled) {
+  return pts.map(p => `<circle cx="${p.x.toFixed(1)}" cy="${p.y.toFixed(1)}" r="2.6" fill="${filled ? color : "none"}"${filled ? "" : ` stroke="${color}" stroke-width="1.5"`}/>`).join("");
 }
 // 1日グラフのSVG本体。横軸=時刻(0-24h)、縦軸=1〜5評価（count型は記録時刻の縦線）
 function dayGraphSvg(evs, type) {
@@ -254,8 +255,9 @@ function dayGraphSvg(evs, type) {
   } else if (type === "mood") {
     series = dgLine(evs.filter(e => e.mood).map(e => ({ x: xOf(e.ts), y: yOf(e.mood) })), "var(--accent-hi)");
   } else if (type === "rated2") {
-    series = dgLine(evs.filter(e => e.amount).map(e => ({ x: xOf(e.ts), y: yOf(e.amount) })), "var(--accent)")
-      + dgDots(evs.filter(e => e.quality).map(e => ({ x: xOf(e.ts), y: yOf(e.quality) })), "var(--good)");
+    // 各回は独立イベントなので線でつながず、量=塗り点・質=中抜き点で表示する
+    series = dgDots(evs.filter(e => e.amount).map(e => ({ x: xOf(e.ts), y: yOf(e.amount) })), "var(--accent)", true)
+      + dgDots(evs.filter(e => e.quality).map(e => ({ x: xOf(e.ts), y: yOf(e.quality) })), "var(--good)", false);
   } else if (type === "rated") {
     series = dgLine(evs.filter(e => e.rating).map(e => ({ x: xOf(e.ts), y: yOf(e.rating) })), "var(--accent)");
   } else { // count型（喫煙など）は記録時刻に縦線
