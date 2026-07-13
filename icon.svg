@@ -21,15 +21,19 @@
     <filter id="sh" x="-30%" y="-30%" width="160%" height="160%">
       <feDropShadow dx="0" dy="10" stdDeviation="18" flood-color="#7c3aed" flood-opacity="0.6"/>
     </filter>
+    <filter id="hsh" x="-50%" y="-50%" width="200%" height="200%">
+      <feDropShadow dx="0" dy="4" stdDeviation="8" flood-color="#000" flood-opacity="0.35"/>
+    </filter>
   </defs>
   <rect width="512" height="512" fill="url(#bgr)"/>
-  <!-- ハート（ピンク・0°直立・王道バランス形）。中心(256,226)基準で1.4倍に拡大。雷がこのハートを貫く構図 -->
-  <path transform="translate(256 226) scale(1.4) translate(-256 -226)"
-        d="M256 150 C256 108 222 80 182 80 C128 80 92 122 92 174 C92 246 158 298 256 372 C354 298 420 246 420 174 C420 122 384 80 330 80 C290 80 256 108 256 150 Z"
-        fill="url(#hpink)" opacity="0.98"/>
-  <!-- 雷（紫電Expense と完全に同一） -->
+  <!-- 雷（紫電Expense と完全に同一・主役） -->
   <g transform="translate(48 56) scale(0.78)" filter="url(#sh)">
     <path d="M296 36 L138 296 L238 296 L198 476 L396 208 L286 208 L352 36 Z" fill="none" stroke="#f5f2fa" stroke-width="72" stroke-linejoin="round"/>
     <path d="M296 36 L138 296 L238 296 L198 476 L396 208 L286 208 L352 36 Z" fill="url(#bolt)" stroke="url(#edge)" stroke-width="40" stroke-linejoin="round"/>
+  </g>
+  <!-- 小さいハート（ピンク・白フチ）を右下コーナーにアクセント配置。中心(398,404)・0.30倍 -->
+  <g transform="translate(398 404) scale(0.30) translate(-256 -226)" filter="url(#hsh)">
+    <path d="M256 150 C256 108 222 80 182 80 C128 80 92 122 92 174 C92 246 158 298 256 372 C354 298 420 246 420 174 C420 122 384 80 330 80 C290 80 256 108 256 150 Z" fill="none" stroke="#fff" stroke-width="34" stroke-linejoin="round"/>
+    <path d="M256 150 C256 108 222 80 182 80 C128 80 92 122 92 174 C92 246 158 298 256 372 C354 298 420 246 420 174 C420 122 384 80 330 80 C290 80 256 108 256 150 Z" fill="url(#hpink)"/>
   </g>
 </svg>
