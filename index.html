@@ -820,9 +820,11 @@ const b64enc = s => btoa(unescape(encodeURIComponent(s)));
 const b64dec = s => decodeURIComponent(escape(atob((s || "").replace(/\n/g, ""))));
 
 async function ghGet(c) {
-  // キャッシュから古いsha（版番号）が返るとPUTが409で失敗し続けるため、キャッシュを完全に無効化して常に最新shaを取る
+  // キャッシュから古いsha（版番号）が返るとPUTが409で失敗し続けるため、キャッシュを無効化して常に最新shaを取る。
+  // 注意: Cache-Control等のリクエストヘッダーはCORSプリフライトで弾かれ「Failed to fetch」になるため使わない。
+  // ヘッダーを足さない cache:"no-store" と、URLの時刻パラメータ(&t=)だけでキャッシュを回避する。
   const url = `https://api.github.com/repos/${c.owner}/${c.repo}/contents/${c.path}?ref=${c.branch || "main"}&t=${Date.now()}`;
-  const r = await fetch(url, { cache: "no-store", headers: { Authorization: "Bearer " + c.token, Accept: "application/vnd.github+json", "Cache-Control": "no-cache" } });
+  const r = await fetch(url, { cache: "no-store", headers: { Authorization: "Bearer " + c.token, Accept: "application/vnd.github+json" } });
   if (r.status === 404) return { data: null, sha: null };
   if (!r.ok) throw new Error("GET " + r.status);
   const j = await r.json();
