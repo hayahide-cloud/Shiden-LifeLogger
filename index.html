@@ -698,7 +698,7 @@ box.addEventListener("click", e => {
       if (whoEl && whoEl.value.trim()) extra.who = whoEl.value.trim();
     }
     const hasChecks = !!p.querySelector("[data-retro-check]");
-    if (editing && editing.key === key) { updateEvent(key, editing.id, extra, ts); editing = null; } // 編集は単一レコードを更新（水の新規は data-wstart/wfinish で処理）
+    if (editing && editing.key === key) { const eid = editing.id; editing = null; updateEvent(key, eid, extra, ts); return; } // 編集は単一レコードを更新。updateEvent内のrender()前にeditingをnullにして編集画面を閉じる（2回押しによる重複を防止）
     else if (hasChecks) { recordToilet(key, extra.amount, extra.quality, !!extra.small, !!extra.large, ts); } // 新規は大→小を副次追加
     else record(key, extra, ts);
     return;
